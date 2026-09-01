@@ -1,0 +1,53 @@
+{
+    "name": "cofa/laravel-api-docs",
+    "description": "Zero-config, structure-agnostic API documentation generator for Laravel. Scans every route, infers headers, body, query and URL parameters plus expected responses, and renders them as beautiful Blade documentation inside your own project.",
+    "keywords": ["laravel", "api", "documentation", "blade", "openapi", "docs", "generator"],
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Cofa",
+            "email": "appssquareacc@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "ext-json": "*",
+        "illuminate/console": "^10.0|^11.0|^12.0",
+        "illuminate/routing": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "nikic/php-parser": "^4.18|^5.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^10.5|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cofa\\ApiDocs\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Cofa\\ApiDocs\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Cofa\\ApiDocs\\ApiDocsServiceProvider"
+            ],
+            "aliases": {
+                "ApiDocs": "Cofa\\ApiDocs\\Facades\\ApiDocs"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
