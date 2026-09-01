@@ -61,6 +61,8 @@ abstract class TestCase extends Orchestra
             $router->get('health', HealthController::class);
             $router->post('legacy/export', [LegacyController::class, 'export']);
             $router->post('reports/{report}', [\Cofa\ApiDocs\Tests\Fixtures\Controllers\ReportController::class, 'store']);
+            $router->put('conflicts', [\Cofa\ApiDocs\Tests\Fixtures\Controllers\ConflictController::class, 'update']);
+            $router->put('agreements', [\Cofa\ApiDocs\Tests\Fixtures\Controllers\ConflictController::class, 'agree']);
             $router->get('ping', fn () => ['pong' => true]);
         });
 

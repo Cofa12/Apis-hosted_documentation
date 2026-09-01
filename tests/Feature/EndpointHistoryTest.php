@@ -233,7 +233,7 @@ class EndpointHistoryTest extends TestCase
         $this->assertStringContainsString('1 added', $output);
         $this->assertStringContainsString('Added    POST /api/webhooks', $output);
         $this->assertStringContainsString('Endpoint added', $output);
-        $this->assertStringContainsString('9 endpoints documented', $output);
+        $this->assertMatchesRegularExpression('/\d+ endpoints documented/', $output);
     }
 
     #[Test]

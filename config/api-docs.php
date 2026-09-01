@@ -61,6 +61,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Documentation precedence
+    |--------------------------------------------------------------------------
+    |
+    | Where a docblock tag and a PHP attribute describe the same thing, the
+    | attribute wins - field by field, so a docblock is only overruled on the
+    | fields the attribute actually declares. Whatever is overruled is printed
+    | as a warning by `api-docs:generate`.
+    |
+    | Set this to true to fail the command on such a disagreement instead,
+    | which is what you want if documentation drift should break CI.
+    |
+    */
+
+    'strict_precedence' => false,
+
+    /*
+    |--------------------------------------------------------------------------
     | Grouping
     |--------------------------------------------------------------------------
     |

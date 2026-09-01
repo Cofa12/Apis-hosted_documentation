@@ -101,7 +101,28 @@ class RouteContext
      */
     public function attributes(string $attribute, bool $includeClass = true): array
     {
-        $instances = [];
+        return array_map(
+            fn (array $declaration) => $declaration['instance'],
+            $this->attributeDeclarations($attribute, $includeClass)
+        );
+    }
+
+    /**
+     * The same attributes, paired with the names of the arguments the author
+     * actually passed.
+     *
+     * An attribute's constructor defaults are indistinguishable from written
+     * values on the instance, so they are read from the declaration itself:
+     * that is what lets an attribute override only what it really says.
+     *
+     * @template T of object
+     *
+     * @param  class-string<T>  $attribute
+     * @return array<int, array{instance: T, declared: array<int, string>}>
+     */
+    public function attributeDeclarations(string $attribute, bool $includeClass = true): array
+    {
+        $declarations = [];
 
         foreach ([$this->methodReflection, $includeClass ? $this->classReflection : null] as $reflection) {
             if ($reflection === null) {
@@ -110,14 +131,58 @@ class RouteContext
 
             try {
                 foreach ($reflection->getAttributes($attribute, \ReflectionAttribute::IS_INSTANCEOF) as $found) {
-                    $instances[] = $found->newInstance();
+                    $declarations[] = [
+                        'instance' => $found->newInstance(),
+                        'declared' => $this->namedArguments($found),
+                    ];
                 }
             } catch (Throwable) {
                 // A broken attribute must never break the whole scan.
             }
         }
 
-        return $instances;
+        return $declarations;
+    }
+
+    /**
+     * Argument names as written, resolving positional arguments against the
+     * attribute's constructor signature.
+     *
+     * @return array<int, string>
+     */
+    protected function namedArguments(\ReflectionAttribute $attribute): array
+    {
+        $arguments = $attribute->getArguments();
+        $names = [];
+        $positional = null;
+
+        foreach ($arguments as $key => $value) {
+            if (is_string($key)) {
+                $names[] = $key;
+
+                continue;
+            }
+
+            if ($positional === null) {
+                $positional = [];
+
+                try {
+                    $constructor = (new ReflectionClass($attribute->getName()))->getConstructor();
+
+                    foreach ($constructor?->getParameters() ?? [] as $parameter) {
+                        $positional[] = $parameter->getName();
+                    }
+                } catch (Throwable) {
+                    $positional = [];
+                }
+            }
+
+            if (isset($positional[$key])) {
+                $names[] = $positional[$key];
+            }
+        }
+
+        return array_values(array_unique($names));
     }
 
     /**

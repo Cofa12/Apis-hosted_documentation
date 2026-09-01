@@ -3,6 +3,7 @@
 namespace Cofa\ApiDocs\Console;
 
 use Cofa\ApiDocs\DocumentationGenerator;
+use Cofa\ApiDocs\Exceptions\DocumentationConflictException;
 use Cofa\ApiDocs\History\HistoryStore;
 use Cofa\ApiDocs\OpenApi\CodeSampleGenerator;
 use Cofa\ApiDocs\Writers\BladeWriter;
@@ -27,6 +28,14 @@ class GenerateCommand extends Command
         $this->components->info('Scanning routes…');
 
         $spec = $generator->generate();
+        $conflicts = $generator->conflicts();
+
+        // Under a strict gate nothing is written: a rejected document must not
+        // be left behind for a later build step to pick up.
+        if ($conflicts !== [] && $generator->strictPrecedence()) {
+            throw new DocumentationConflictException($conflicts);
+        }
+
         $writer = new BladeWriter($files, $config, base_path(), '', $generator->tenancy());
 
         $specPath = $writer->writeSpec($spec, $this->option('spec') ?: null);
@@ -74,6 +83,23 @@ class GenerateCommand extends Command
             $this->components->warn(
                 'The cached document could not be refreshed: ' . $generator->cacheError()
             );
+        }
+
+        if ($conflicts !== []) {
+            // Documentation drift should be seen, not silently resolved.
+            $this->newLine();
+
+            // Laravel's console output layer drops some symbol characters, so
+            // the marker here is one that always survives to the terminal.
+            $this->components->warn(sprintf(
+                '%d documentation %s between docblocks and attributes. The attribute value is used:',
+                count($conflicts),
+                count($conflicts) === 1 ? 'conflict' : 'conflicts',
+            ));
+
+            foreach ($conflicts as $conflict) {
+                $this->line('  <fg=yellow>-</> ' . $conflict->message());
+            }
         }
 
         $errors = $generator->errors();

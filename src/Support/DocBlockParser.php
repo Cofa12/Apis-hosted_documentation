@@ -107,7 +107,10 @@ class DocBlockParser
      * Parse a Scribe style parameter tag:
      *   name type required description. Example: value
      *
-     * @return array{name: string, type: string, required: bool, description: string, example: mixed}|null
+     * The `declared` list says which fields the author actually wrote, so that
+     * a tag naming a parameter without a type does not silently claim one.
+     *
+     * @return array{name: string, type: string, required: bool, description: string, example: mixed, declared: array<int, string>}|null
      */
     public function parseParamTag(string $value): ?array
     {
@@ -117,10 +120,12 @@ class DocBlockParser
             return null;
         }
 
+        $declared = [];
         $example = null;
 
         if (preg_match('/\bExample:\s*(.+)$/is', $value, $matches) === 1) {
             $example = $this->castExample(trim($matches[1]));
+            $declared[] = 'example';
             $value = trim(substr($value, 0, (int) strpos($value, $matches[0])));
         }
 
@@ -136,20 +141,29 @@ class DocBlockParser
 
         if ($parts !== [] && in_array(strtolower(rtrim($parts[0], '[]')), $known, true)) {
             $type = strtolower(array_shift($parts));
+            $declared[] = 'type';
         }
 
         $required = false;
 
         if ($parts !== [] && in_array(strtolower($parts[0]), ['required', 'optional'], true)) {
             $required = strtolower(array_shift($parts)) === 'required';
+            $declared[] = 'required';
+        }
+
+        $description = trim(implode(' ', $parts));
+
+        if ($description !== '') {
+            $declared[] = 'description';
         }
 
         return [
             'name' => $name,
             'type' => $this->normaliseType($type),
             'required' => $required,
-            'description' => trim(implode(' ', $parts)),
+            'description' => $description,
             'example' => $example,
+            'declared' => array_values(array_unique($declared)),
         ];
     }
 

@@ -87,6 +87,7 @@ class DocBlockParserTest extends TestCase
             'required' => true,
             'description' => 'The age of the user.',
             'example' => 34,
+            'declared' => ['example', 'type', 'required', 'description'],
         ], $parsed);
     }
 
@@ -99,6 +100,17 @@ class DocBlockParserTest extends TestCase
         $this->assertSame('string', $parsed['type']);
         $this->assertFalse($parsed['required']);
         $this->assertNull($parsed['example']);
+        $this->assertSame([], $parsed['declared'], 'A bare name states nothing beyond the name.');
+    }
+
+    #[Test]
+    public function it_reports_only_the_fields_a_tag_actually_states(): void
+    {
+        // The defaults are indistinguishable from written values otherwise,
+        // which is what would let one source silently overrule another.
+        $this->assertSame(['type', 'description'], $this->parser->parseParamTag('email string The email.')['declared']);
+        $this->assertSame(['required'], $this->parser->parseParamTag('email required')['declared']);
+        $this->assertSame(['example'], $this->parser->parseParamTag('email Example: a@b.test')['declared']);
     }
 
     #[Test]

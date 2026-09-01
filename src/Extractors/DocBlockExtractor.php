@@ -19,12 +19,17 @@ use Cofa\ApiDocs\Support\ParameterTree;
  */
 class DocBlockExtractor implements Extractor
 {
+    /** What this docblock actually declared, for the precedence check. */
+    protected array $declared = [];
+
     public function __construct(protected DocBlockParser $parser = new DocBlockParser())
     {
     }
 
     public function extract(Endpoint $endpoint, RouteContext $context): void
     {
+        $this->declared = [];
+
         $class = $context->classDocBlock();
         $method = $context->methodDocBlock();
 
@@ -44,6 +49,12 @@ class DocBlockExtractor implements Extractor
                 $endpoint->meta['tags'][] = $tag;
             }
         }
+
+        if (($operationId = $method->tag('operationid')) !== null && $operationId !== '') {
+            $this->declared['operation']['operationId'] = $operationId;
+        }
+
+        $endpoint->meta['declared']['docblock'] = $this->declared;
     }
 
     protected function applyGroup(Endpoint $endpoint, DocBlock $class, DocBlock $method): void
@@ -53,6 +64,7 @@ class DocBlockExtractor implements Extractor
         if ($group !== null && trim($group) !== '') {
             $lines = preg_split('/\R/', trim($group)) ?: [];
             $endpoint->group = trim((string) array_shift($lines));
+            $this->declared['operation']['group'] = $endpoint->group;
 
             $description = trim(implode("\n", $lines));
 
@@ -74,16 +86,20 @@ class DocBlockExtractor implements Extractor
 
         if ($summary !== null && trim($summary) !== '') {
             $endpoint->title = trim($summary);
+            $this->declared['operation']['summary'] = $endpoint->title;
         } elseif ($method->summary !== '') {
             $endpoint->title = $method->summary;
+            $this->declared['operation']['summary'] = $endpoint->title;
         }
 
         $description = $method->tag('description');
 
         if ($description !== null && trim($description) !== '') {
             $endpoint->description = trim($description);
+            $this->declared['operation']['description'] = $endpoint->description;
         } elseif ($method->description !== '') {
             $endpoint->description = $method->description;
+            $this->declared['operation']['description'] = $endpoint->description;
         }
     }
 
@@ -91,14 +107,17 @@ class DocBlockExtractor implements Extractor
     {
         if ($method->hasTag('authenticated') || $class->hasTag('authenticated')) {
             $endpoint->authenticated = true;
+            $this->declared['operation']['authenticated'] = true;
         }
 
         if ($method->hasTag('unauthenticated')) {
             $endpoint->authenticated = false;
+            $this->declared['operation']['authenticated'] = false;
         }
 
         if ($method->hasTag('deprecated') || $class->hasTag('deprecated')) {
             $endpoint->deprecated = true;
+            $this->declared['operation']['deprecated'] = true;
             $note = $method->tag('deprecated') ?? $class->tag('deprecated');
             $endpoint->deprecationNote = $note !== null && trim($note) !== '' ? trim($note) : null;
         }
@@ -122,6 +141,7 @@ class DocBlockExtractor implements Extractor
                     continue;
                 }
 
+                $this->declared[$bucket][$parsed->name] = $this->valuesOf($parsed);
                 $parameters[] = $parsed;
             }
 
@@ -151,6 +171,7 @@ class DocBlockExtractor implements Extractor
             required: $parsed['required'],
             description: $parsed['description'],
             example: $parsed['example'],
+            declared: $parsed['declared'],
         );
 
         if ($parameter->example === null) {
@@ -161,6 +182,29 @@ class DocBlockExtractor implements Extractor
         }
 
         return $parameter;
+    }
+
+    /**
+     * The values a parameter definition actually stated, keyed by field.
+     *
+     * @return array<string, mixed>
+     */
+    protected function valuesOf(Parameter $parameter): array
+    {
+        $values = [];
+
+        foreach ($parameter->declared ?? [] as $field) {
+            $values[$field] = match ($field) {
+                'type' => $parameter->type,
+                'required' => $parameter->required,
+                'description' => $parameter->description,
+                'example' => $parameter->example,
+                'enum' => $parameter->enum,
+                default => null,
+            };
+        }
+
+        return $values;
     }
 
     protected function applyHeaders(Endpoint $endpoint, DocBlock $class, DocBlock $method): void
@@ -187,12 +231,19 @@ class DocBlockExtractor implements Extractor
                 [$rest, $description] = array_map('trim', explode('  ', $rest, 2));
             }
 
-            $endpoint->addHeader(new HeaderParam(
+            $header = new HeaderParam(
                 name: rtrim($name, ':'),
                 value: $rest,
                 required: true,
                 description: $description,
-            ));
+            );
+
+            $this->declared['headers'][$header->name] = array_filter([
+                'value' => $header->value === '' ? null : $header->value,
+                'description' => $header->description === '' ? null : $header->description,
+            ], fn ($value) => $value !== null);
+
+            $endpoint->addHeader($header);
         }
     }
 
@@ -202,6 +253,11 @@ class DocBlockExtractor implements Extractor
 
         foreach ($method->tags('response') as $value) {
             $parsed = $parser->parseResponseTag($value);
+
+            $this->declared['responses'][(string) $parsed['status']] = array_filter([
+                'content' => $parsed['content'],
+                'description' => $parsed['description'] === '' ? null : $parsed['description'],
+            ], fn ($value) => $value !== null);
 
             $endpoint->addResponse(new ResponseExample(
                 status: $parsed['status'],

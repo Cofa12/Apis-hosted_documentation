@@ -265,6 +265,27 @@ class UserController
 }
 ```
 
+**If both a docblock tag and an attribute describe the same parameter on the
+same action, the attribute's value wins.** Precedence is decided field by
+field, not source by source: if the docblock documents `email` and an attribute
+documents `notify`, both apply, and an attribute that names a parameter without
+saying anything about its type leaves the documented type alone. The same rule
+covers the summary, description, group, deprecation, authentication, headers
+and responses.
+
+Nothing is overruled quietly. `api-docs:generate` reports every disagreement:
+
+```
+ WARN 1 documentation conflict between docblocks and attributes. The attribute value is used:
+
+ - UserController::update — body param `email`: docblock and #[ApiParam] disagree (required: true vs false). Using attribute value.
+```
+
+Teams that would rather have documentation drift break the build than resolve
+itself can set `strict_precedence` to `true`, which makes `api-docs:generate`
+fail on a disagreement and write nothing. The documentation page is never
+affected either way — drift should fail a build, not take the docs down.
+
 Hide something with `#[HideFromDocs]` or `@ignore` on the action or the whole
 controller.
 
@@ -285,6 +306,7 @@ public function bodyParameters(): array
 `config/api-docs.php` covers:
 
 * **`routes`** — include/exclude URI patterns, required middleware, whether to skip closures.
+* **`strict_precedence`** — fail `api-docs:generate` on a docblock/attribute disagreement instead of warning.
 * **`grouping`** — group by controller or by URI segment, plus an explicit group order.
 * **`auth`** — which middleware means "authenticated", and the header to show.
 * **`headers`** — defaults sent with every request, and with every body.
@@ -315,11 +337,11 @@ composer install
 composer test
 ```
 
-262 tests cover the rule parser, docblock parser, parameter nesting, schema
+291 tests cover the rule parser, docblock parser, parameter nesting, schema
 generation, the spec reader (including third-party OpenAPI documents), code
 samples, the change differ and history store, tenant resolution and scoping,
-degraded cache stores, the scanner end to end, the generated document, the
-rendered page and every console command.
+degraded cache stores, docblock/attribute precedence, the scanner end to end,
+the generated document, the rendered page and every console command.
 
 CI runs the suite on every supported combination — PHP 8.2, 8.3 and 8.4
 against Laravel 12 and 13 — on each push and pull request.

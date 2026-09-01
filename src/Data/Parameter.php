@@ -22,6 +22,17 @@ class Parameter implements JsonSerializable
         public mixed $default = null,
         public bool $nullable = false,
         public ?string $format = null,
+        /**
+         * The fields the author actually wrote, when this definition comes
+         * from hand written documentation.
+         *
+         * null means the definition speaks for every field, which is what an
+         * inferred parameter does. An empty list means it names a parameter
+         * without saying anything more about it.
+         *
+         * @var array<int, string>|null
+         */
+        public ?array $declared = null,
     ) {
     }
 
@@ -74,6 +85,13 @@ class Parameter implements JsonSerializable
      */
     public function mergeFrom(self $other, bool $preferOther = false): self
     {
+        // An explicit definition only overrides the fields it actually
+        // declares: an attribute that names a parameter without saying
+        // anything about its type must not reset the inferred type.
+        if ($preferOther && $other->declared !== null) {
+            return $this->applyDeclared($other);
+        }
+
         $take = static fn ($mine, $theirs, $empty = null) => $preferOther
             ? ($theirs !== $empty && $theirs !== null ? $theirs : $mine)
             : ($mine !== $empty && $mine !== null ? $mine : $theirs);
@@ -107,6 +125,45 @@ class Parameter implements JsonSerializable
         return $this;
     }
 
+    /** Copy across only the fields the other definition declares. */
+    public function applyDeclared(self $other): self
+    {
+        foreach ($other->declared ?? [] as $field) {
+            match ($field) {
+                'type' => $this->type = $other->type,
+                'required' => $this->required = $other->required,
+                'description' => $this->description = $other->description,
+                'example' => $this->example = $other->example,
+                'enum' => $this->enum = $other->enum,
+                'default' => $this->default = $other->default,
+                'nullable' => $this->nullable = $other->nullable,
+                'format' => $this->format = $other->format,
+                default => null,
+            };
+        }
+
+        $this->rules = array_values(array_unique(array_merge($this->rules, $other->rules)));
+
+        foreach ($other->children as $child) {
+            $existing = null;
+
+            foreach ($this->children as $mine) {
+                if ($mine->name === $child->name) {
+                    $existing = $mine;
+                    break;
+                }
+            }
+
+            if ($existing !== null) {
+                $existing->mergeFrom($child, preferOther: true);
+            } else {
+                $this->children[] = $child;
+            }
+        }
+
+        return $this;
+    }
+
     public function toArray(): array
     {
         return [
@@ -121,6 +178,7 @@ class Parameter implements JsonSerializable
             'default' => $this->default,
             'nullable' => $this->nullable,
             'format' => $this->format,
+            'declared' => $this->declared,
         ];
     }
 
@@ -138,6 +196,7 @@ class Parameter implements JsonSerializable
             default: $data['default'] ?? null,
             nullable: (bool) ($data['nullable'] ?? false),
             format: $data['format'] ?? null,
+            declared: $data['declared'] ?? null,
         );
     }
 

@@ -193,6 +193,22 @@ class DocumentationGenerator
         return $this->scanner()->errors();
     }
 
+    /**
+     * Places where a docblock and an attribute described the same thing
+     * differently. The attribute won; these are what it overruled.
+     *
+     * @return array<int, \Cofa\ApiDocs\Scanning\Conflict>
+     */
+    public function conflicts(): array
+    {
+        return $this->scanner()->conflicts();
+    }
+
+    public function strictPrecedence(): bool
+    {
+        return (bool) data_get($this->config, 'strict_precedence', false);
+    }
+
     protected function loadExternal(string $source): Spec
     {
         if (Str::startsWith($source, ['http://', 'https://'])) {

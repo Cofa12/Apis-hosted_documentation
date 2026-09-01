@@ -24,6 +24,9 @@ class RouteScanner
     /** @var array<int, array{route: string, error: string}> */
     protected array $errors = [];
 
+    /** @var array<int, Conflict> */
+    protected array $conflicts = [];
+
     /**
      * @param  array<string, mixed>  $config
      * @param  array<int, Extractor>  $extractors
@@ -47,6 +50,7 @@ class RouteScanner
     public function scan(): array
     {
         $endpoints = [];
+        $this->conflicts = [];
 
         foreach ($this->routes() as $route) {
             $context = RouteContext::forRoute($route);
@@ -69,10 +73,24 @@ class RouteScanner
                 }
             }
 
+            foreach ($endpoint->meta['conflicts'] ?? [] as $conflict) {
+                $this->conflicts[] = Conflict::fromArray($conflict);
+            }
+
             $endpoints[] = $endpoint;
         }
 
         return $endpoints;
+    }
+
+    /**
+     * Documentation that two sources described differently.
+     *
+     * @return array<int, Conflict>
+     */
+    public function conflicts(): array
+    {
+        return $this->conflicts;
     }
 
     /** @return array<int, Route> */
