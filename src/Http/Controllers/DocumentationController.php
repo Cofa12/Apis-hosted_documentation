@@ -3,6 +3,7 @@
 namespace Cofa\ApiDocs\Http\Controllers;
 
 use Cofa\ApiDocs\DocumentationGenerator;
+use Cofa\ApiDocs\History\HistoryStore;
 use Cofa\ApiDocs\OpenApi\CodeSampleGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,8 +11,10 @@ use Illuminate\Http\Response;
 
 class DocumentationController
 {
-    public function __construct(protected DocumentationGenerator $generator)
-    {
+    public function __construct(
+        protected DocumentationGenerator $generator,
+        protected HistoryStore $history,
+    ) {
     }
 
     /** The rendered Blade documentation. */
@@ -26,6 +29,8 @@ class DocumentationController
             'samples' => new CodeSampleGenerator((array) data_get($config, 'code_samples', ['curl'])),
             'baseUrl' => $this->baseUrl($config, $spec->baseUrl()),
             'specUrl' => $this->specUrl($config),
+            'history' => $this->history->load(),
+            'historyOptions' => (array) data_get($config, 'history', []),
         ])->render();
 
         return new Response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);

@@ -9,6 +9,9 @@ organised — then compiles what it found into an OpenAPI document and renders
 that document as a searchable reference page with headers, parameters, request
 bodies, expected responses, code samples and an in-page request console.
 
+It also remembers: every generation is compared against the last one, so each
+endpoint carries a timeline of what changed about it and when.
+
 ```bash
 composer require cofa/laravel-api-docs
 php artisan api-docs:generate
@@ -39,6 +42,7 @@ From each route it then works backwards through the code that handles it:
 | Authentication | auth middleware, `@authenticated`, `#[Authenticated]` |
 | Success responses | API resources (followed into nested resources), models, `response()->json()`, `@response` |
 | Error responses | auth (401), authorization (403), model binding (404), validation (422), throttling (429), `abort()` |
+| Change history | the diff between this generation and the last recorded snapshot |
 
 Rules are read by instantiating the form request when that is safe, and by
 parsing the source with [nikic/php-parser](https://github.com/nikic/PHP-Parser)
@@ -61,6 +65,42 @@ Nothing OpenAPI reserves is lost either: `Accept`, `Content-Type` and
 `Authorization` stay out of `parameters` (as the specification requires) but are
 kept on the operation under `x-headers`, alongside `x-controller`,
 `x-middleware` and `x-route-name`.
+
+## Endpoint history
+
+Every `api-docs:generate` compares the new document against the last recorded
+snapshot and stores the difference as a revision. The page then shows a
+changelog of recent revisions, and each endpoint carries its own timeline:
+
+```
+rev-4  2026-08-30  1 added, 2 changed
+  Added    POST /api/webhooks
+  Changed  PUT  /api/users/{user}
+      · Body field `email` is now required   [breaking]
+      · Response 422 added
+  Changed  GET  /api/users
+      · Added query parameter `filter`
+```
+
+It tracks summaries and descriptions, grouping, deprecation, authentication,
+path/query/header parameters, request body fields (nested ones included),
+response status codes and response body fields — reporting each one as a
+sentence rather than a JSON diff. Changes that can break an existing client (a
+removed endpoint or field, a newly required field, newly required auth) are
+flagged as breaking.
+
+```bash
+php artisan api-docs:history                      # the timeline, newest first
+php artisan api-docs:history --endpoint=users     # only endpoints matching a path
+php artisan api-docs:history --breaking           # only revisions that break clients
+php artisan api-docs:history --json               # the raw record
+php artisan api-docs:generate --no-history        # generate without recording
+```
+
+The record lives in `resources/views/vendor/api-docs/history.json`. Commit it:
+that is what makes the timeline survive across environments and deployments.
+Configure retention and display under `api-docs.history`, or set
+`history.enabled` to `false` to turn the whole feature off.
 
 ## Installation
 
@@ -193,6 +233,7 @@ public function bodyParameters(): array
 * Response tabs per status code with syntax-highlighted bodies and an expandable schema table.
 * Code samples in cURL, JavaScript, PHP and Python, filled in with real example values.
 * A "try it" console that sends the request from the browser and shows the live response.
+* A changelog of recent revisions, and a per-endpoint history showing what changed and when.
 * Light and dark themes, respecting the system preference and remembering the choice.
 * No CDN, no build step, no external requests — the CSS and JS are inlined, so it works behind a strict CSP and offline.
 
@@ -203,10 +244,10 @@ composer install
 composer test
 ```
 
-178 tests cover the rule parser, docblock parser, parameter nesting, schema
+218 tests cover the rule parser, docblock parser, parameter nesting, schema
 generation, the spec reader (including third-party OpenAPI documents), code
-samples, the scanner end to end, the generated document, the rendered page and
-every console command.
+samples, the change differ and history store, the scanner end to end, the
+generated document, the rendered page and every console command.
 
 CI runs the suite on PHP 8.2, 8.3 and 8.4 on every push and pull request.
 

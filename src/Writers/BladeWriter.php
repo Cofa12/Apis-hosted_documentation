@@ -3,6 +3,7 @@
 namespace Cofa\ApiDocs\Writers;
 
 use Cofa\ApiDocs\OpenApi\Spec;
+use Cofa\ApiDocs\Support\ProjectPath;
 use Illuminate\Filesystem\Filesystem;
 
 /**
@@ -87,31 +88,12 @@ class BladeWriter
     /** Resolve a project relative path against the application root. */
     public function path(string $path): string
     {
-        if ($this->isAbsolute($path)) {
-            return $path;
-        }
-
-        $base = $this->basePath !== ''
-            ? $this->basePath
-            : (function_exists('base_path') ? base_path() : (getcwd() ?: '.'));
-
-        return rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
-    }
-
-    protected function isAbsolute(string $path): bool
-    {
-        return str_starts_with($path, DIRECTORY_SEPARATOR) || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1;
+        return ProjectPath::resolve($path, $this->basePath);
     }
 
     /** Relative to the project root, for friendlier console output. */
     public function relative(string $path): string
     {
-        $base = $this->basePath !== ''
-            ? $this->basePath
-            : (function_exists('base_path') ? base_path() : (getcwd() ?: ''));
-
-        return $base !== '' && str_starts_with($path, $base)
-            ? ltrim(substr($path, strlen($base)), DIRECTORY_SEPARATOR)
-            : $path;
+        return ProjectPath::relative($path, $this->basePath);
     }
 }

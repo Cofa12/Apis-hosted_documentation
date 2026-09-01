@@ -48,6 +48,8 @@
                 </div>
             </section>
         @endif
+
+        @include('api-docs::partials.changelog')
     </section>
 
     @forelse($spec->groupedOperations() as $group => $operations)

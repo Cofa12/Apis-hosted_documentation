@@ -214,6 +214,38 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Endpoint history
+    |--------------------------------------------------------------------------
+    |
+    | Every time the documentation is generated it is compared against the last
+    | recorded snapshot, and the difference is stored as a revision. The page
+    | then shows, per endpoint, when it changed and what changed about it.
+    |
+    | Keep the history file in version control so the timeline survives across
+    | environments and deployments.
+    |
+    */
+
+    'history' => [
+        'enabled' => true,
+
+        'path' => 'resources/views/vendor/api-docs/history.json',
+
+        // How many revisions to retain (oldest are dropped first).
+        'keep' => 50,
+
+        // Show the changelog and the per endpoint history on the page.
+        'show_in_ui' => true,
+
+        // How many revisions are listed under a single endpoint.
+        'per_endpoint' => 5,
+
+        // How many revisions the changelog at the top of the page shows.
+        'changelog' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Where the generated Blade documentation is written
     |--------------------------------------------------------------------------
     |

@@ -13,6 +13,9 @@
         implode(' ', $operation->tags()),
     ])));
     $requestSchema = $operation->requestSchema();
+    $lastChanged = isset($history) && (($historyOptions ?? [])['show_in_ui'] ?? true)
+        ? $history->lastChangedAt($operation->method, $operation->path)
+        : null;
     $showHandler = ($ui['show_controllers'] ?? true) || ($ui['show_middleware'] ?? true);
 @endphp
 
@@ -35,6 +38,10 @@
 
         @if($operation->isDeprecated())
             <span class="badge dep">Deprecated</span>
+        @endif
+
+        @if($lastChanged !== null)
+            <span class="badge updated" title="Last documented change">Updated {{ substr($lastChanged, 0, 10) }}</span>
         @endif
 
         <span class="summary">{{ $operation->summary() }}</span>
@@ -95,6 +102,8 @@
             @endif
 
             @include('api-docs::partials.responses', ['operation' => $operation])
+
+            @include('api-docs::partials.history', ['operation' => $operation])
 
             @if($showHandler && ($operation->controller() !== null || $operation->middleware() !== []))
                 <div class="handler">
