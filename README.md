@@ -154,6 +154,25 @@ a Laravel domain pattern:
 If your configuration is cached, remember that a closure resolver cannot be
 serialised — use the invokable class form.
 
+## Caching
+
+Caching is off by default: the documentation is scanned live, which is what you
+want in development. Turn `cache.enabled` on in production and refresh it
+during deployment.
+
+The documentation never depends on the cache being healthy. If the store cannot
+be reached — a database cache driver pointed at a connection whose `cache`
+table was never migrated, a Redis that is down — the page falls back to a live
+scan and the commands report the reason instead of failing. With caching off,
+the cache store is not touched at all.
+
+If your default store is somewhere the documentation should not rely on (a
+tenant database, for instance), point it somewhere else:
+
+```php
+'cache' => ['enabled' => true, 'store' => 'file'],
+```
+
 ## Installation
 
 ```bash
@@ -296,11 +315,11 @@ composer install
 composer test
 ```
 
-254 tests cover the rule parser, docblock parser, parameter nesting, schema
+262 tests cover the rule parser, docblock parser, parameter nesting, schema
 generation, the spec reader (including third-party OpenAPI documents), code
 samples, the change differ and history store, tenant resolution and scoping,
-the scanner end to end, the generated document, the rendered page and every
-console command.
+degraded cache stores, the scanner end to end, the generated document, the
+rendered page and every console command.
 
 CI runs the suite on every supported combination — PHP 8.2, 8.3 and 8.4
 against Laravel 12 and 13 — on each push and pull request.

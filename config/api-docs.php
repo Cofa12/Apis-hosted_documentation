@@ -323,7 +323,15 @@ return [
 
     'cache' => [
         'enabled' => env('API_DOCS_CACHE', false),
+
+        // Which cache store to use. null = the application default. Point this
+        // at a store you know is reachable (for example "file") when the
+        // default one lives somewhere the documentation cannot rely on, such
+        // as a tenant database.
+        'store' => env('API_DOCS_CACHE_STORE'),
+
         'key' => 'api-docs.documentation',
+
         'ttl' => 3600,
     ],
 ];

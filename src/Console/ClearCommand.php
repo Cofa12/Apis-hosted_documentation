@@ -13,9 +13,21 @@ class ClearCommand extends Command
 
     public function handle(DocumentationGenerator $generator): int
     {
-        $generator->forgetCache();
+        if ($generator->forgetCache(force: true)) {
+            $this->components->info('The cached API documentation was cleared.');
 
-        $this->components->info('The cached API documentation was cleared.');
+            return self::SUCCESS;
+        }
+
+        if (($error = $generator->cacheError()) !== null) {
+            $this->components->warn('The cache store could not be reached: ' . $error);
+
+            // Nothing can have been cached while caching is off, so this is
+            // only a real failure when the feature is actually in use.
+            return $generator->cacheEnabled() ? self::FAILURE : self::SUCCESS;
+        }
+
+        $this->components->info('Nothing to clear: no cache store is configured.');
 
         return self::SUCCESS;
     }

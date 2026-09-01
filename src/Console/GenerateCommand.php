@@ -70,6 +70,12 @@ class GenerateCommand extends Command
 
         $generator->forgetCache();
 
+        if ($generator->cacheError() !== null) {
+            $this->components->warn(
+                'The cached document could not be refreshed: ' . $generator->cacheError()
+            );
+        }
+
         $errors = $generator->errors();
 
         if ($errors !== []) {

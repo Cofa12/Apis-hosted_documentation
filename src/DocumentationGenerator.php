@@ -23,6 +23,7 @@ use Cofa\ApiDocs\Tenancy\Tenancy;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * The entry point: scans the application and hands back an OpenAPI document.
@@ -32,6 +33,9 @@ class DocumentationGenerator
     protected ?RouteScanner $scanner = null;
 
     protected Tenancy $tenancy;
+
+    /** Why the cache could not be used, if it could not be used. */
+    protected ?string $cacheError = null;
 
     /** @param array<string, mixed> $config */
     public function __construct(
@@ -127,19 +131,60 @@ class DocumentationGenerator
             return $this->generate();
         }
 
-        $key = $this->tenancy->cacheKey((string) data_get($this->config, 'cache.key', 'api-docs.documentation'));
         $ttl = (int) data_get($this->config, 'cache.ttl', 3600);
 
-        $document = $this->cache->remember($key, $ttl, fn () => $this->generate()->toArray());
+        try {
+            $document = $this->cache->remember($this->cacheKey(), $ttl, fn () => $this->generate()->toArray());
+        } catch (Throwable $exception) {
+            // An unreachable cache store - a missing table, a down Redis - is
+            // no reason to stop serving documentation. Scan live instead.
+            $this->cacheError = $exception->getMessage();
+
+            return $this->generate();
+        }
 
         return Spec::fromArray(is_array($document) ? $document : []);
     }
 
-    public function forgetCache(): void
+    public function cacheKey(): string
     {
-        $this->cache?->forget(
-            $this->tenancy->cacheKey((string) data_get($this->config, 'cache.key', 'api-docs.documentation'))
-        );
+        return $this->tenancy->cacheKey((string) data_get($this->config, 'cache.key', 'api-docs.documentation'));
+    }
+
+    public function cacheEnabled(): bool
+    {
+        return (bool) data_get($this->config, 'cache.enabled', false);
+    }
+
+    /** The reason the cache was skipped, if it was skipped. */
+    public function cacheError(): ?string
+    {
+        return $this->cacheError;
+    }
+
+    /**
+     * Drop the cached document.
+     *
+     * With caching switched off nothing was ever written, so the store is left
+     * untouched: reaching for it would make an unrelated, possibly unmigrated
+     * cache backend fail a command that has already done its job. Pass $force
+     * when the user explicitly asked for the cache to be cleared.
+     */
+    public function forgetCache(bool $force = false): bool
+    {
+        if ($this->cache === null || (! $force && ! $this->cacheEnabled())) {
+            return false;
+        }
+
+        try {
+            $this->cache->forget($this->cacheKey());
+
+            return true;
+        } catch (Throwable $exception) {
+            $this->cacheError = $exception->getMessage();
+
+            return false;
+        }
     }
 
     /** @return array<int, array{route: string, error: string}> */

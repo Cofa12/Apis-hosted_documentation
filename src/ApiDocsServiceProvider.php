@@ -26,17 +26,24 @@ class ApiDocsServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(DocumentationGenerator::class, function ($app) {
+            $config = (array) $app['config']->get('api-docs', []);
             $cache = null;
 
             try {
-                $cache = $app->make(CacheRepository::class);
+                $store = $config['cache']['store'] ?? null;
+
+                // Resolving a named store can fail on its own (a driver that is
+                // not configured), and caching is optional either way.
+                $cache = is_string($store) && $store !== ''
+                    ? $app->make('cache')->store($store)
+                    : $app->make(CacheRepository::class);
             } catch (Throwable) {
                 // Caching is optional – the generator works without it.
             }
 
             return new DocumentationGenerator(
                 $app->make(Router::class),
-                (array) $app['config']->get('api-docs', []),
+                $config,
                 $cache,
                 $app->make(Tenancy::class),
             );
