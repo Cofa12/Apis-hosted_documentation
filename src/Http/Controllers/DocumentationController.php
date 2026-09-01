@@ -4,6 +4,7 @@ namespace Cofa\ApiDocs\Http\Controllers;
 
 use Cofa\ApiDocs\DocumentationGenerator;
 use Cofa\ApiDocs\History\HistoryStore;
+use Cofa\ApiDocs\Tenancy\Tenancy;
 use Cofa\ApiDocs\OpenApi\CodeSampleGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class DocumentationController
     public function __construct(
         protected DocumentationGenerator $generator,
         protected HistoryStore $history,
+        protected Tenancy $tenancy,
     ) {
     }
 
@@ -46,9 +48,20 @@ class DocumentationController
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
-    /** @param array<string, mixed> $config */
+    /**
+     * The base URL the samples and the try-it console point at.
+     *
+     * Under tenancy the docs are served from the tenant's own host, so that
+     * host is a better answer than a single configured URL.
+     *
+     * @param  array<string, mixed>  $config
+     */
     protected function baseUrl(array $config, string $fallback): string
     {
+        if ($this->tenancy->followsRequestHost()) {
+            return rtrim(url('/'), '/');
+        }
+
         $configured = (string) data_get($config, 'base_url', '');
 
         return rtrim($configured !== '' ? $configured : $fallback, '/');

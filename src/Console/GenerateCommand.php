@@ -27,7 +27,7 @@ class GenerateCommand extends Command
         $this->components->info('Scanning routes…');
 
         $spec = $generator->generate();
-        $writer = new BladeWriter($files, $config, base_path());
+        $writer = new BladeWriter($files, $config, base_path(), '', $generator->tenancy());
 
         $specPath = $writer->writeSpec($spec, $this->option('spec') ?: null);
         $this->components->twoColumnDetail('OpenAPI document', $writer->relative($specPath));

@@ -4,6 +4,7 @@ namespace Cofa\ApiDocs\History;
 
 use Cofa\ApiDocs\OpenApi\Spec;
 use Cofa\ApiDocs\Support\ProjectPath;
+use Cofa\ApiDocs\Tenancy\Tenancy;
 use Illuminate\Filesystem\Filesystem;
 use Throwable;
 
@@ -15,14 +16,18 @@ class HistoryStore
 {
     protected SpecDiffer $differ;
 
+    protected Tenancy $tenancy;
+
     /** @param array<string, mixed> $config */
     public function __construct(
         protected Filesystem $files,
         protected array $config = [],
         protected string $basePath = '',
         ?SpecDiffer $differ = null,
+        ?Tenancy $tenancy = null,
     ) {
         $this->differ = $differ ?? new SpecDiffer();
+        $this->tenancy = $tenancy ?? new Tenancy($config);
     }
 
     public function enabled(): bool
@@ -33,7 +38,9 @@ class HistoryStore
     public function path(): string
     {
         return ProjectPath::resolve(
-            (string) data_get($this->config, 'history.path', 'resources/views/vendor/api-docs/history.json'),
+            $this->tenancy->apply(
+                (string) data_get($this->config, 'history.path', 'resources/views/vendor/api-docs/history.json')
+            ),
             $this->basePath
         );
     }

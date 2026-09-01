@@ -43,6 +43,7 @@ From each route it then works backwards through the code that handles it:
 | Success responses | API resources (followed into nested resources), models, `response()->json()`, `@response` |
 | Error responses | auth (401), authorization (403), model binding (404), validation (422), throttling (429), `abort()` |
 | Change history | the diff between this generation and the last recorded snapshot |
+| Tenant scoping | the active tenant, for per-tenant documents, history and cache |
 
 Rules are read by instantiating the form request when that is safe, and by
 parsing the source with [nikic/php-parser](https://github.com/nikic/PHP-Parser)
@@ -101,6 +102,57 @@ The record lives in `resources/views/vendor/api-docs/history.json`. Commit it:
 that is what makes the timeline survive across environments and deployments.
 Configure retention and display under `api-docs.history`, or set
 `history.enabled` to `false` to turn the whole feature off.
+
+## Multi tenancy
+
+A multi tenant application serves the same routes from many contexts, so the
+artefacts have to be scoped per tenant. Put a `{tenant}` placeholder anywhere
+in the config and it is replaced with the current tenant key:
+
+```php
+'title'     => '{tenant} API',
+'base_url'  => 'https://{tenant}.example.com',
+'output'    => ['spec_file' => 'resources/views/vendor/api-docs/{tenant}/openapi.json'],
+'history'   => ['path' => 'resources/views/vendor/api-docs/{tenant}/history.json'],
+'tenancy'   => ['enabled' => true],
+```
+
+Each tenant then gets its own document, its own change history and its own
+cache entry — the cache key is scoped automatically, because sharing one
+cached document between tenants would serve one tenant's documentation to
+another. The tenant key is sanitised before it reaches a path or a cache key,
+so a key like `../../etc` cannot escape its directory.
+
+The tenant is detected automatically for **stancl/tenancy** (the `tenant()`
+helper) and **spatie/laravel-multitenancy** (`Tenant::current()`). For anything
+else, point the resolver at a closure or an invokable class:
+
+```php
+'tenancy' => [
+    'enabled'  => true,
+    'resolver' => fn () => auth()->user()?->company_id,
+    // or, if you run `config:cache`, an invokable class:
+    // 'resolver' => \App\Docs\CurrentTenant::class,
+],
+```
+
+Resolution happens on every read rather than once at boot, so a console
+command that walks through tenants (`php artisan tenants:run api-docs:generate`)
+writes each tenant's documentation to its own place. When no tenant is active
+the `central_key` (`central` by default) is used instead.
+
+On the page itself, the code samples and the try-it console follow the host the
+documentation is being viewed on, so a tenant sees its own domain rather than a
+single configured URL. Set `tenancy.follow_request_host` to `false` to use the
+configured `base_url` instead. For domain based tenancy the docs route accepts
+a Laravel domain pattern:
+
+```php
+'serve' => ['domain' => '{account}.example.com'],
+```
+
+If your configuration is cached, remember that a closure resolver cannot be
+serialised — use the invokable class form.
 
 ## Installation
 
@@ -244,17 +296,19 @@ composer install
 composer test
 ```
 
-218 tests cover the rule parser, docblock parser, parameter nesting, schema
+254 tests cover the rule parser, docblock parser, parameter nesting, schema
 generation, the spec reader (including third-party OpenAPI documents), code
-samples, the change differ and history store, the scanner end to end, the
-generated document, the rendered page and every console command.
+samples, the change differ and history store, tenant resolution and scoping,
+the scanner end to end, the generated document, the rendered page and every
+console command.
 
-CI runs the suite on PHP 8.2, 8.3 and 8.4 on every push and pull request.
+CI runs the suite on every supported combination — PHP 8.2, 8.3 and 8.4
+against Laravel 12 and 13 — on each push and pull request.
 
 ## Requirements
 
-* PHP 8.2+
-* Laravel 12
+* PHP 8.2+ (Laravel 13 itself needs PHP 8.3+)
+* Laravel 12 or 13
 
 The code itself runs unchanged on Laravel 10 and 11 — the suite passes against
 both — but those branches are past their security support window, so a current

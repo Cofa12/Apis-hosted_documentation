@@ -27,7 +27,7 @@ class ExportCommand extends Command
             return self::SUCCESS;
         }
 
-        $writer = new BladeWriter($files, $generator->config(), base_path());
+        $writer = new BladeWriter($files, $generator->config(), base_path(), '', $generator->tenancy());
 
         $path = $this->argument('path');
 

@@ -7,6 +7,7 @@ use Cofa\ApiDocs\Console\ExportCommand;
 use Cofa\ApiDocs\Console\GenerateCommand;
 use Cofa\ApiDocs\Console\HistoryCommand;
 use Cofa\ApiDocs\History\HistoryStore;
+use Cofa\ApiDocs\Tenancy\Tenancy;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Routing\Router;
@@ -19,6 +20,10 @@ class ApiDocsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/api-docs.php', 'api-docs');
+
+        $this->app->singleton(Tenancy::class, function ($app) {
+            return new Tenancy((array) $app['config']->get('api-docs', []));
+        });
 
         $this->app->singleton(DocumentationGenerator::class, function ($app) {
             $cache = null;
@@ -33,6 +38,7 @@ class ApiDocsServiceProvider extends ServiceProvider
                 $app->make(Router::class),
                 (array) $app['config']->get('api-docs', []),
                 $cache,
+                $app->make(Tenancy::class),
             );
         });
 
@@ -41,6 +47,8 @@ class ApiDocsServiceProvider extends ServiceProvider
                 $app->make(Filesystem::class),
                 (array) $app['config']->get('api-docs', []),
                 $app->basePath(),
+                null,
+                $app->make(Tenancy::class),
             );
         });
 

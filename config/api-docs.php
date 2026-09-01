@@ -277,6 +277,46 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Multi tenancy
+    |--------------------------------------------------------------------------
+    |
+    | A multi tenant application serves the same routes from many contexts, so
+    | the artefacts have to be scoped per tenant. Put a {tenant} placeholder
+    | anywhere in this file - output paths, the history path, the cache key,
+    | the base URL, the title, the OpenAPI servers - and it is replaced with
+    | the current tenant key:
+    |
+    |     'spec_file' => 'resources/views/vendor/api-docs/{tenant}/openapi.json',
+    |     'base_url'  => 'https://{tenant}.example.com',
+    |
+    | The tenant is detected automatically for stancl/tenancy and
+    | spatie/laravel-multitenancy. For anything else, point "resolver" at a
+    | closure or an invokable class that returns the current tenant key.
+    |
+    */
+
+    'tenancy' => [
+        'enabled' => env('API_DOCS_TENANCY', false),
+
+        // null = auto detect. Otherwise a closure or an invokable class name.
+        'resolver' => null,
+
+        // Used in place of {tenant} when no tenant is active.
+        'central_key' => 'central',
+
+        // "host" falls back to the request host when no tenancy package is found.
+        'strategy' => null,
+
+        // Never share one cached document between tenants.
+        'scope_cache' => true,
+
+        // Point the code samples and the try-it console at the host the docs
+        // are actually being viewed on.
+        'follow_request_host' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Cache the scan result instead of re-reading the code on every request
     |--------------------------------------------------------------------------
     */

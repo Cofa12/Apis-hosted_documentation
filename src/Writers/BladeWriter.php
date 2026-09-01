@@ -4,6 +4,7 @@ namespace Cofa\ApiDocs\Writers;
 
 use Cofa\ApiDocs\OpenApi\Spec;
 use Cofa\ApiDocs\Support\ProjectPath;
+use Cofa\ApiDocs\Tenancy\Tenancy;
 use Illuminate\Filesystem\Filesystem;
 
 /**
@@ -13,13 +14,18 @@ use Illuminate\Filesystem\Filesystem;
  */
 class BladeWriter
 {
+    protected Tenancy $tenancy;
+
     /** @param array<string, mixed> $config */
     public function __construct(
         protected Filesystem $files,
         protected array $config = [],
         protected string $basePath = '',
         protected string $packageViewsPath = '',
+        ?Tenancy $tenancy = null,
     ) {
+        $this->tenancy = $tenancy ?? new Tenancy($config);
+
         if ($this->packageViewsPath === '') {
             $this->packageViewsPath = realpath(__DIR__ . '/../../resources/views') ?: '';
         }
@@ -88,7 +94,7 @@ class BladeWriter
     /** Resolve a project relative path against the application root. */
     public function path(string $path): string
     {
-        return ProjectPath::resolve($path, $this->basePath);
+        return ProjectPath::resolve($this->tenancy->apply($path), $this->basePath);
     }
 
     /** Relative to the project root, for friendlier console output. */

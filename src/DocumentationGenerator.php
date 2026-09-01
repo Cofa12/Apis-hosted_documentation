@@ -19,6 +19,7 @@ use Cofa\ApiDocs\Support\AstResolver;
 use Cofa\ApiDocs\Support\ModelSchemaInspector;
 use Cofa\ApiDocs\Support\ResourceSchemaInspector;
 use Cofa\ApiDocs\Support\ValidationRuleParser;
+use Cofa\ApiDocs\Tenancy\Tenancy;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Str;
@@ -30,27 +31,44 @@ class DocumentationGenerator
 {
     protected ?RouteScanner $scanner = null;
 
+    protected Tenancy $tenancy;
+
     /** @param array<string, mixed> $config */
     public function __construct(
         protected Router $router,
         protected array $config = [],
         protected ?CacheRepository $cache = null,
+        ?Tenancy $tenancy = null,
     ) {
+        $this->tenancy = $tenancy ?? new Tenancy($config);
     }
 
     /** @param array<string, mixed> $config */
     public function setConfig(array $config): self
     {
         $this->config = $config;
+        $this->tenancy->setConfig($config);
         $this->scanner = null;
 
         return $this;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * The configuration with the {tenant} placeholder resolved.
+     *
+     * It is resolved on every read rather than once, because a console command
+     * may walk through several tenants in a single process.
+     *
+     * @return array<string, mixed>
+     */
     public function config(): array
     {
-        return $this->config;
+        return $this->tenancy->applyToConfig($this->config);
+    }
+
+    public function tenancy(): Tenancy
+    {
+        return $this->tenancy;
     }
 
     public function scanner(): RouteScanner
@@ -95,7 +113,7 @@ class DocumentationGenerator
             return $this->loadExternal($source);
         }
 
-        $builder = new OpenApiBuilder($this->config);
+        $builder = new OpenApiBuilder($this->config());
 
         return Spec::fromArray($builder->build($this->endpoints()));
     }
@@ -109,7 +127,7 @@ class DocumentationGenerator
             return $this->generate();
         }
 
-        $key = (string) data_get($this->config, 'cache.key', 'api-docs.documentation');
+        $key = $this->tenancy->cacheKey((string) data_get($this->config, 'cache.key', 'api-docs.documentation'));
         $ttl = (int) data_get($this->config, 'cache.ttl', 3600);
 
         $document = $this->cache->remember($key, $ttl, fn () => $this->generate()->toArray());
@@ -119,7 +137,9 @@ class DocumentationGenerator
 
     public function forgetCache(): void
     {
-        $this->cache?->forget((string) data_get($this->config, 'cache.key', 'api-docs.documentation'));
+        $this->cache?->forget(
+            $this->tenancy->cacheKey((string) data_get($this->config, 'cache.key', 'api-docs.documentation'))
+        );
     }
 
     /** @return array<int, array{route: string, error: string}> */
