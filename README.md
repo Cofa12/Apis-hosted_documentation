@@ -208,13 +208,18 @@ generation, the spec reader (including third-party OpenAPI documents), code
 samples, the scanner end to end, the generated document, the rendered page and
 every console command.
 
-CI runs the suite on every supported combination — PHP 8.1 through 8.4 against
-Laravel 10, 11 and 12 — on each push and pull request.
+CI runs the suite on PHP 8.2, 8.3 and 8.4 on every push and pull request.
 
 ## Requirements
 
-* PHP 8.1+
-* Laravel 10, 11 or 12
+* PHP 8.2+
+* Laravel 12
+
+The code itself runs unchanged on Laravel 10 and 11 — the suite passes against
+both — but those branches are past their security support window, so a current
+Composer refuses to install them and they are not listed as supported. If you
+are pinned to one of them, require this package with your own advisory
+exception (`policy.advisories.block`) and it will work.
 
 ## License
 
