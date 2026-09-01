@@ -1,5 +1,7 @@
 # Laravel API Docs
 
+[![CI](https://github.com/Cofa12/Apis-hosted_documentation/actions/workflows/ci.yml/badge.svg)](https://github.com/Cofa12/Apis-hosted_documentation/actions/workflows/ci.yml)
+
 Zero-config API documentation for Laravel, built on the **OpenAPI 3.1** standard and rendered as **Blade views inside your own project**.
 
 Point it at an application and it reads the whole API — however the project is
@@ -205,6 +207,9 @@ composer test
 generation, the spec reader (including third-party OpenAPI documents), code
 samples, the scanner end to end, the generated document, the rendered page and
 every console command.
+
+CI runs the suite on every supported combination — PHP 8.1 through 8.4 against
+Laravel 10, 11 and 12 — on each push and pull request.
 
 ## Requirements
 
