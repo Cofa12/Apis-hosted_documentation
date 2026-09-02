@@ -13,9 +13,9 @@ class AuthResource extends JsonResource
         return [
             'user' => $this->user,
             'users' => $this->users,
-            'access_token' => 'access token',
+            'access_token' => 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9',
             'expires_in' => 'expires in',
-            'refresh_token' => 'refresh token',
+            'refresh_token' => 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9',
             'refresh_expires_in' => 'refresh expires in',
         ];
     }
