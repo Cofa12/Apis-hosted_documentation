@@ -86,6 +86,16 @@ class AstResolverTest extends TestCase
     }
 
     #[Test]
+    public function it_finds_models_from_nested_resource_namespaces(): void
+    {
+        $inspector = new ResourceSchemaInspector($this->ast, new ModelSchemaInspector());
+        $shape = $inspector->shapeFor('Cofa\\ApiDocs\\Tests\\Fixtures\\Resources\\Accounts\\AuthResource');
+
+        $this->assertSame(1, $shape['user']['id']);
+        $this->assertSame('John Doe', $shape['user']['name']);
+    }
+
+    #[Test]
     public function a_resource_without_to_array_falls_back_to_the_model_it_is_named_after(): void
     {
         $inspector = new ResourceSchemaInspector($this->ast, new ModelSchemaInspector());

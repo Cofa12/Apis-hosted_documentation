@@ -269,8 +269,8 @@ class ResourceSchemaInspector
         $root = $namespace;
 
         foreach (['\\Http\\Resources', '\\Resources', '\\Http\\Controllers', '\\Controllers'] as $marker) {
-            if (str_ends_with($root, $marker)) {
-                $root = Str::beforeLast($root, $marker);
+            if (Str::contains($root, $marker)) {
+                $root = Str::before($root, $marker);
                 break;
             }
         }
