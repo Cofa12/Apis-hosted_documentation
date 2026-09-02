@@ -82,7 +82,10 @@ class AstResolverTest extends TestCase
         $this->assertSame('John Doe', $shape['user']['name']);
         $this->assertIsArray($shape['users']);
         $this->assertSame(1, $shape['users'][0]['id']);
-        $this->assertSame('access token', $shape['access_token']);
+        $this->assertSame('eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9', $shape['access_token']);
+        $this->assertSame(3600, $shape['expires_in']);
+        $this->assertSame('eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9', $shape['refresh_token']);
+        $this->assertSame(3600, $shape['refresh_expires_in']);
     }
 
     #[Test]

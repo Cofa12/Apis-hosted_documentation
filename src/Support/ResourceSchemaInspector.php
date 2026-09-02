@@ -137,6 +137,10 @@ class ResourceSchemaInspector
         }
 
         if ($expr instanceof Node\Scalar\String_) {
+            if (Str::snake($expr->value) === Str::snake($key)) {
+                return ExampleFactory::forName($key);
+            }
+
             return $expr->value;
         }
 
