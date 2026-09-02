@@ -31,8 +31,8 @@ class ExampleFactoryTest extends TestCase
             ['profile_url', 'https://example.com/resource'],
             ['contact_email', 'john@example.com'],
             ['per_page', 15],
-            ['access_token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'],
-            ['refresh_token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'],
+            ['access_token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.example-signature'],
+            ['refresh_token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.example-signature'],
             ['expires_in', 3600],
             ['refresh_expires_in', 3600],
         ];
