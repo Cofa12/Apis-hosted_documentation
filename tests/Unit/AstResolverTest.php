@@ -7,6 +7,7 @@ use Cofa\ApiDocs\Support\ModelSchemaInspector;
 use Cofa\ApiDocs\Support\ResourceSchemaInspector;
 use Cofa\ApiDocs\Tests\Fixtures\Models\User;
 use Cofa\ApiDocs\Tests\Fixtures\Requests\StoreUserRequest;
+use Cofa\ApiDocs\Tests\Fixtures\Resources\AuthResource;
 use Cofa\ApiDocs\Tests\Fixtures\Resources\UserResource;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -69,6 +70,19 @@ class AstResolverTest extends TestCase
         $this->assertIsArray($shape['posts']);
         $this->assertSame(1, $shape['posts'][0]['id'], 'Nested resource collections are followed.');
         $this->assertSame('2026-01-15T09:30:00.000000Z', $shape['posts'][0]['created_at']);
+    }
+
+    #[Test]
+    public function it_preserves_model_values_in_resource_payloads_as_objects_or_collections(): void
+    {
+        $inspector = new ResourceSchemaInspector($this->ast, new ModelSchemaInspector());
+        $shape = $inspector->shapeFor(AuthResource::class);
+
+        $this->assertSame(1, $shape['user']['id']);
+        $this->assertSame('John Doe', $shape['user']['name']);
+        $this->assertIsArray($shape['users']);
+        $this->assertSame(1, $shape['users'][0]['id']);
+        $this->assertSame('access token', $shape['access_token']);
     }
 
     #[Test]

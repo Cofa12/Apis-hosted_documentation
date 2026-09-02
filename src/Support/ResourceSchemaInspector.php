@@ -180,6 +180,10 @@ class ResourceSchemaInspector
             }
         }
 
+        if ($expr instanceof Expr\Variable && is_string($expr->name)) {
+            return $this->nestedValueFor($expr->name, $key, $owner);
+        }
+
         // $this->whenLoaded('posts', fn () => ...), $this->when($x, $value), ->toIso8601String()
         if ($expr instanceof Expr\MethodCall) {
             return $this->fromMethodCall($expr, $key, $depth, $visited, $owner);
@@ -187,6 +191,12 @@ class ResourceSchemaInspector
 
         if ($expr instanceof Expr\NullsafePropertyFetch || $expr instanceof Expr\PropertyFetch) {
             $name = $expr->name instanceof Node\Identifier ? $expr->name->toString() : $key;
+
+            $nested = $this->nestedValueFor($name, $key, $owner);
+
+            if ($nested !== null) {
+                return $nested;
+            }
 
             return ExampleFactory::forName($name !== '' ? $name : $key);
         }
@@ -198,6 +208,92 @@ class ResourceSchemaInspector
         }
 
         return ExampleFactory::forName($key);
+    }
+
+    protected function nestedValueFor(string $name, string $key, string $owner): mixed
+    {
+        $singular = Str::singular(Str::snake($name));
+        $resource = $this->matchingResource($singular, $owner);
+
+        if ($resource !== null) {
+            $shape = $this->shapeFor($resource);
+
+            if ($shape !== null) {
+                return $this->isCollectionName($key, $singular) ? [$shape] : $shape;
+            }
+        }
+
+        $model = $this->matchingModel($singular, $owner);
+
+        if ($model !== null) {
+            $shape = $this->models->shapeFor($model);
+
+            if ($shape !== null) {
+                return $this->isCollectionName($key, $singular) ? [$shape] : $shape;
+            }
+        }
+
+        if ($this->isLikelyObjectName($key, $singular)) {
+            return $this->isCollectionName($key, $singular) ? [[]] : [];
+        }
+
+        return ExampleFactory::forName($key);
+    }
+
+    protected function matchingResource(string $name, string $owner): ?string
+    {
+        foreach ($this->candidateClasses($name . 'Resource', $owner, ['Resources', 'Http\\Resources']) as $class) {
+            if ($this->isResource($class)) {
+                return $class;
+            }
+        }
+
+        return null;
+    }
+
+    protected function matchingModel(string $name, string $owner): ?string
+    {
+        foreach ($this->candidateClasses($name, $owner, ['Models', '']) as $class) {
+            if ($this->models->isModel($class)) {
+                return $class;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param array<int, string> $suffixes */
+    protected function candidateClasses(string $name, string $owner, array $suffixes): array
+    {
+        $namespace = Str::beforeLast($owner, '\\');
+        $root = $namespace;
+
+        foreach (['\\Http\\Resources', '\\Resources', '\\Http\\Controllers', '\\Controllers'] as $marker) {
+            if (str_ends_with($root, $marker)) {
+                $root = Str::beforeLast($root, $marker);
+                break;
+            }
+        }
+
+        $classes = [];
+
+        foreach ($suffixes as $suffix) {
+            $classes[] = ($suffix === '' ? $root : $root . '\\' . $suffix) . '\\' . $name;
+            $classes[] = ($suffix === '' ? $namespace : $namespace . '\\' . $suffix) . '\\' . $name;
+        }
+
+        return array_values(array_unique(array_filter($classes)));
+    }
+
+    protected function isCollectionName(string $key, string $singular): bool
+    {
+        return Str::plural($singular) === Str::snake($key) && Str::plural($singular) !== $singular;
+    }
+
+    protected function isLikelyObjectName(string $key, string $singular): bool
+    {
+        return $singular !== '' && ! Str::endsWith($singular, ['_id', '_token'])
+            && Str::contains($singular, ['user', 'profile', 'account', 'author', 'owner']);
     }
 
     /** @param array<int, string> $visited */
