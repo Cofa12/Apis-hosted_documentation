@@ -16,6 +16,23 @@ class ExampleFactoryTest extends TestCase
         $this->assertSame($expected, ExampleFactory::forName($name));
     }
 
+    #[Test]
+    public function it_uses_the_configured_token_for_token_examples(): void
+    {
+        if (! function_exists('app') || ! app()->bound('config')) {
+            $this->markTestSkipped('The Laravel config helper is unavailable.');
+        }
+
+        config(['api-docs.auth.example_token' => 'project-token']);
+
+        try {
+            $this->assertSame('project-token', ExampleFactory::forName('access_token'));
+            $this->assertSame('project-token', ExampleFactory::forName('refresh_token'));
+        } finally {
+            config(['api-docs.auth.example_token' => null]);
+        }
+    }
+
     public static function nameProvider(): array
     {
         return [

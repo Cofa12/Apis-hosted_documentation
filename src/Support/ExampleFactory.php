@@ -88,6 +88,14 @@ class ExampleFactory
         $key = Str::snake(Str::afterLast($name, '.'));
         $key = str_replace('*', '', $key);
 
+        if (in_array($key, ['token', 'access_token', 'refresh_token'], true)) {
+            $configuredToken = self::configuredToken();
+
+            if ($configuredToken !== null && $configuredToken !== '') {
+                return $configuredToken;
+            }
+        }
+
         if ($type !== null && in_array($type, ['object', 'object[]', 'array'], true)) {
             return self::forType($type);
         }
@@ -133,6 +141,21 @@ class ExampleFactory
         }
 
         return Str::headline($key) !== '' ? Str::lower(Str::headline($key)) : 'string';
+    }
+
+    protected static function configuredToken(): ?string
+    {
+        if (! function_exists('config')) {
+            return null;
+        }
+
+        try {
+            $token = config('api-docs.auth.example_token');
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return is_string($token) ? $token : null;
     }
 
     public static function forType(string $type, string $name = 'value'): mixed

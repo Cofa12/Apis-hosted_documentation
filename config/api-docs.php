@@ -108,6 +108,10 @@ return [
 
         'value' => 'Bearer {YOUR_API_TOKEN}',
 
+        // Optional token used only in generated response examples. Keep this
+        // in an environment variable instead of committing a live credential.
+        'example_token' => env('API_DOCS_EXAMPLE_TOKEN'),
+
         'description' => 'Bearer token issued by the authentication endpoints.',
     ],
 
