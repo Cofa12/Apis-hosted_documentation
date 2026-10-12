@@ -54,17 +54,24 @@ class DocumentationController
      * Under tenancy the docs are served from the tenant's own host, so that
      * host is a better answer than a single configured URL.
      *
+     * The same goes for a base URL that is only the APP_URL default: the page
+     * is served by the API itself, but often on another host than APP_URL
+     * names (`artisan serve`, Valet, a Docker port), and the browser refuses
+     * every try-it request sent to a different origin than the page.
+     *
      * @param  array<string, mixed>  $config
      */
     protected function baseUrl(array $config, string $fallback): string
     {
-        if ($this->tenancy->followsRequestHost()) {
+        $configured = rtrim((string) data_get($config, 'base_url', ''), '/');
+
+        if ($this->tenancy->followsRequestHost()
+            || ($configured === '' && $fallback === '')
+            || $configured === rtrim((string) config('app.url', ''), '/')) {
             return rtrim(url('/'), '/');
         }
 
-        $configured = (string) data_get($config, 'base_url', '');
-
-        return rtrim($configured !== '' ? $configured : $fallback, '/');
+        return $configured !== '' ? $configured : rtrim($fallback, '/');
     }
 
     /** @param array<string, mixed> $config */

@@ -215,7 +215,19 @@
                 });
             }).catch(function (error) {
                 status.innerHTML = '<span class="err">Request failed</span>';
-                pre.textContent = String(error && error.message ? error.message : error);
+                var message = String(error && error.message ? error.message : error);
+                var target = null;
+                try { target = new URL(url, window.location.href).origin; } catch (e) { /* invalid URL */ }
+
+                // A failed fetch says nothing useful; the usual cause is a request to another origin.
+                if (target && target !== window.location.origin) {
+                    message += '\n\nThe request was sent to ' + target + ', but this page is served from '
+                        + window.location.origin + '. The browser blocks that unless the API is reachable from here '
+                        + 'and allows the page through CORS. Set API_DOCS_BASE_URL to the API\'s address, '
+                        + 'or edit the Request URL above.';
+                }
+
+                pre.textContent = message;
             }).finally(function () {
                 button.disabled = false;
             });

@@ -20,6 +20,11 @@ return [
     |--------------------------------------------------------------------------
     | Base URL used in the generated code samples / try-it console
     |--------------------------------------------------------------------------
+    |
+    | Left at the APP_URL default, the served page uses the host it is opened
+    | on instead, so the try-it console always calls the same origin. Set
+    | API_DOCS_BASE_URL to send requests to a different server.
+    |
     */
 
     'base_url' => env('API_DOCS_BASE_URL', env('APP_URL', 'http://localhost')),

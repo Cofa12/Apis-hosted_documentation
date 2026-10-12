@@ -71,7 +71,7 @@ class DocumentationPageTest extends TestCase
     #[Test]
     public function it_renders_code_samples_for_each_configured_language(): void
     {
-        $html = $this->get('/api/documentation')->getContent();
+        $html = $this->get('https://api.example.test/api/documentation')->getContent();
 
         $this->assertStringContainsString('curl --request POST', $html);
         $this->assertStringContainsString('await fetch(', $html);
@@ -87,6 +87,26 @@ class DocumentationPageTest extends TestCase
         $this->withConfig(['api-docs.ui.try_it' => false]);
 
         $this->assertStringNotContainsString('<form class="tryit"', $this->get('/api/documentation')->getContent());
+    }
+
+    #[Test]
+    public function the_try_it_console_calls_the_host_the_page_is_served_from_by_default(): void
+    {
+        // base_url is the APP_URL default, but the page is opened on another host.
+        $html = $this->get('http://127.0.0.1:8000/api/documentation')->getContent();
+
+        $this->assertStringContainsString('value="http://127.0.0.1:8000/api/users"', $html);
+        $this->assertStringNotContainsString('value="https://api.example.test/api/users"', $html);
+    }
+
+    #[Test]
+    public function the_try_it_console_keeps_an_explicitly_configured_base_url(): void
+    {
+        $this->withConfig(['api-docs.base_url' => 'https://staging.example.test']);
+
+        $html = $this->get('http://127.0.0.1:8000/api/documentation')->getContent();
+
+        $this->assertStringContainsString('value="https://staging.example.test/api/users"', $html);
     }
 
     #[Test]
