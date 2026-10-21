@@ -339,6 +339,19 @@ return [
         // Point the code samples and the try-it console at the host the docs
         // are actually being viewed on.
         'follow_request_host' => true,
+
+        // Tenants identified by a request header. Set the name (for example
+        // "X-Tenant") and the header is added to every route behind the
+        // listed middleware - aliases or class names - or to every route when
+        // the list is empty. Routes behind stancl/tenancy's
+        // InitializeTenancyByRequestData get its header without any setup.
+        // Works whether or not "enabled" is on.
+        'header' => [
+            'name' => env('API_DOCS_TENANT_HEADER'),
+            'value' => env('API_DOCS_TENANT_HEADER_VALUE', 'your-tenant'),
+            'middleware' => [],
+            'description' => 'Identifies the tenant the request is for.',
+        ],
     ],
 
     /*

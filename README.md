@@ -154,6 +154,26 @@ a Laravel domain pattern:
 If your configuration is cached, remember that a closure resolver cannot be
 serialised — use the invokable class form.
 
+### Tenant header
+
+When the tenant is picked from a request header, document that header on the
+tenant routes so the code samples and the try-it console send it:
+
+```php
+'tenancy' => [
+    'header' => [
+        'name'       => 'X-Tenant',
+        'value'      => 'your-tenant',               // example value shown in the docs
+        'middleware' => ['ChangeTenantMiddleware'],  // aliases or class names; [] = every route
+    ],
+],
+```
+
+Or set `API_DOCS_TENANT_HEADER=X-Tenant` in `.env`. This works whether or not
+`tenancy.enabled` is on. A header documented on the endpoint itself (with
+`#[ApiHeader]` or `@header`) wins over this one. Routes behind stancl/tenancy's
+`InitializeTenancyByRequestData` get its header with no setup.
+
 ## Caching
 
 Caching is off by default: the documentation is scanned live, which is what you
