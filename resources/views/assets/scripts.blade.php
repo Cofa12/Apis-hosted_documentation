@@ -180,22 +180,35 @@
             var pre = form.querySelector('[data-tryit-body]');
 
             var url = form.querySelector('[name="__url"]').value;
-            var method = form.getAttribute('data-method') || 'GET';
-            var headers = {};
+            var method = form.querySelector('[name="__method"]').value || 'GET';
+            var headers = new Headers();
+            var invalid = null;
 
-            form.querySelectorAll('[data-header]').forEach(function (input) {
-                if (input.value !== '') { headers[input.getAttribute('data-header')] = input.value; }
+            form.querySelectorAll('[data-tryit-header]').forEach(function (row) {
+                var name = row.querySelector('[data-header-name]').value.trim();
+                if (!row.querySelector('[data-header-on]').checked || name === '') { return; }
+                try { headers.set(name, row.querySelector('[data-header-value]').value); } catch (e) { invalid = name; }
             });
+
+            output.hidden = false;
+
+            if (invalid !== null) {
+                status.innerHTML = '<span class="err">Invalid header</span>';
+                pre.textContent = '"' + invalid + '" is not a valid header name or value.';
+                return;
+            }
 
             var options = { method: method, headers: headers };
             var bodyField = form.querySelector('[name="__body"]');
 
-            if (bodyField && bodyField.value.trim() !== '' && method !== 'GET' && method !== 'HEAD') {
+            if (bodyField && bodyField.value.trim() !== '' && !bodyless(method)) {
                 options.body = bodyField.value;
+                if (!headers.has('Content-Type')) {
+                    headers.set('Content-Type', form.getAttribute('data-content-type') || 'application/json');
+                }
             }
 
             button.disabled = true;
-            output.hidden = false;
             status.innerHTML = '<span>Sending…</span>';
             pre.textContent = '';
 
@@ -233,12 +246,56 @@
             });
         });
 
+        function bodyless(method) {
+            return method === 'GET' || method === 'HEAD';
+        }
+
+        function syncBodyField(form) {
+            var field = form.querySelector('[data-tryit-body-field]');
+            if (field) { field.hidden = bodyless(form.querySelector('[name="__method"]').value); }
+        }
+
+        // Keep the server-rendered header rows so Reset can bring them back after edits.
+        document.querySelectorAll('[data-tryit]').forEach(function (form) {
+            var list = form.querySelector('[data-tryit-headers]');
+            if (list) { list.__initial = list.innerHTML; }
+            syncBodyField(form);
+        });
+
+        document.addEventListener('change', function (event) {
+            var form = event.target.closest('[data-tryit]');
+            if (!form) { return; }
+            if (event.target.matches('[name="__method"]')) { syncBodyField(form); }
+            if (event.target.matches('[data-header-on]')) {
+                event.target.closest('[data-tryit-header]').classList.toggle('off', !event.target.checked);
+            }
+        });
+
         document.addEventListener('click', function (event) {
+            var add = event.target.closest('[data-tryit-add-header]');
+            if (add) {
+                var addForm = add.closest('[data-tryit]');
+                var template = addForm.querySelector('[data-tryit-header-template]');
+                var row = template.content.firstElementChild.cloneNode(true);
+                addForm.querySelector('[data-tryit-headers]').appendChild(row);
+                row.querySelector('[data-header-name]').focus();
+                return;
+            }
+
+            var remove = event.target.closest('[data-tryit-remove-header]');
+            if (remove) {
+                remove.closest('[data-tryit-header]').remove();
+                return;
+            }
+
             var reset = event.target.closest('[data-tryit-reset]');
             if (!reset) { return; }
             var form = reset.closest('[data-tryit]');
             if (form) {
+                var list = form.querySelector('[data-tryit-headers]');
+                if (list && list.__initial !== undefined) { list.innerHTML = list.__initial; }
                 form.reset();
+                syncBodyField(form);
                 var output = form.querySelector('[data-tryit-output]');
                 if (output) { output.hidden = true; }
             }
